@@ -8,17 +8,25 @@ from bs4 import BeautifulSoup
 import threading
 import json
 import time
+import chromedriver_autoinstaller
 
 lock = threading.Lock()
 
 pokemons = []
 scores = []
 
+OPPO_SHIELD = 1
+OUR_SHIELD = 1
+
 
 def autotest(begin, end):
+    chromedriver_autoinstaller.install()
+
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_experimental_option(
+        "excludeSwitches", ["enable-logging"])
 
     driver = webdriver.Chrome(options=chrome_options)
 
@@ -26,61 +34,67 @@ def autotest(begin, end):
 
     time.sleep(2.5)
 
-    multi_battle = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        (By.XPATH, "/html/body/div/div/div[2]/div/a[2]")))
+    multi_battle = WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+        (By.CSS_SELECTOR, "#main > div.section.league-select-container.white > div > a:nth-child(2)")))
     multi_battle.click()
 
-    team_select = Select(WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        (By.XPATH, "/html/body/div/div/div[3]/div[3]/select[1]"))))
-    team_select.select_by_index(5)
+    time.sleep(0.5)
 
-    fill_team = Select(WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        (By.XPATH, "/html/body/div/div/div[3]/div[3]/div/div[1]/select"))))
-    fill_team.select_by_index(1)
+    team_select = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+        (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > select.format-select"))))
+    team_select.select_by_value("custom")
 
-    opponent_shield = Select(WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        (By.XPATH, "/html/body/div/div/div[3]/div[3]/div/div[2]/select[1]"))))
-    opponent_shield.select_by_index(2)
+    fill_team = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+        (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.custom-options > select"))))
+    fill_team.select_by_value("great")
+
+    opponent_shield = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+        (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.options > select.shield-select"))))
+    opponent_shield.select_by_value(str(OPPO_SHIELD))
 
     firstTime = True
 
     for pokeIndex in range(begin, end):
-        print(f"now processing pokemon #{pokeIndex}")
+        try:
+            global pokemons
+            if not pokemons:
+                choose_pokemon = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > select")))
+                pokemons = choose_pokemon.text.split('\n')
 
-        global pokemons
-        if not pokemons:
-            choose_pokemon = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, "/html/body/div/div/div[3]/div[1]/select")))
-            pokemons = choose_pokemon.text.split('\n')
+                print("len of pokemons:", len(pokemons))
 
-            print("len of pokemons:", len(pokemons))
+            fill_pokemon = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > input")))
+            fill_pokemon.clear()
+            fill_pokemon.send_keys(pokemons[pokeIndex+1].strip())
 
-        fill_pokemon = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, "/html/body/div/div/div[3]/div[1]/input")))
-        fill_pokemon.clear()
-        fill_pokemon.send_keys(pokemons[pokeIndex+1].strip())
+            if firstTime:
+                pokemon_shield = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > div.options > div.shield-section > select"))))
+                pokemon_shield.select_by_value(str(OUR_SHIELD))
 
-        if firstTime:
-            pokemon_shield = Select(WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-                (By.XPATH, "/html/body/div/div/div[3]/div[1]/div[2]/div[11]/div[1]/select"))))
-            pokemon_shield.select_by_index(0)
+            cp = int(WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > h3 > span.stat"))).text)
+            print(f"#{pokeIndex} {pokemons[pokeIndex+1]}: {cp}")
 
+            if cp < 1400:
+                continue
 
-        if int(WebDriverWait(driver, 20).until(
-                EC.element_to_be_clickable((By.XPATH, "/html/body/div/div/div[3]/div[1]/div[2]/div[6]/div/span[2]"))).text) < 1400:
+            battle = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, ".battle-btn")))
+            battle.click()
+
+            score = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.battle > div:nth-child(6) > div > div > div > div > div.label.rating.star > span"))).text
+
+            with lock:
+                scores.append(
+                    {"name": pokemons[pokeIndex+1].strip(), "score": int(score)})
+
+            firstTime = False
+        except:
             continue
-
-        battle = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, ".battle-btn")))
-        battle.click()
-
-        score = WebDriverWait(driver, 20).until(
-                EC.element_to_be_clickable((By.XPATH, "/html/body/div/div/div[4]/div[4]/div/div/div/div/div[4]/span"))).text
-
-        with lock:
-            scores.append({"name": pokemons[pokeIndex+1].strip(), "score": int(score)})
-
-        firstTime = False
 
 
 if __name__ == "__main__":
@@ -89,7 +103,7 @@ if __name__ == "__main__":
     threads = []
 
     for i in range(10):
-        t = threading.Thread(target=autotest, args=(113*i, 113*(i+1),))
+        t = threading.Thread(target=autotest, args=(116*i, 116*(i+1),))
         t.start()
         threads.append(t)
 
