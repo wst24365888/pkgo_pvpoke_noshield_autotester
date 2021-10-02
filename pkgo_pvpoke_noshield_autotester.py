@@ -42,13 +42,13 @@ def autotest(begin, end):
 
     time.sleep(0.5)
 
-    team_select = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
-        (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > select.format-select"))))
-    team_select.select_by_value("custom")
+    # team_select = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
+    #     (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > select.format-select"))))
+    # team_select.select_by_value("custom")
 
-    fill_team = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
-        (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.custom-options > select"))))
-    fill_team.select_by_value("great")
+    # fill_team = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
+    #     (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.custom-options > select"))))
+    # fill_team.select_by_value("great")
 
     opponent_shield = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.options > select.shield-select"))))
@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     print(result)
 
-    f = open("result.json", "w", encoding="utf-8")
+    f = open("result-all.json", "w", encoding="utf-8")
     json.dump(result, f, ensure_ascii=False)
     f.close()
 
