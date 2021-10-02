@@ -9,6 +9,8 @@ import threading
 import json
 import time
 import chromedriver_autoinstaller
+import sys
+import traceback
 
 lock = threading.Lock()
 
@@ -34,21 +36,21 @@ def autotest(begin, end):
 
     time.sleep(2.5)
 
-    multi_battle = WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+    multi_battle = WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, "#main > div.section.league-select-container.white > div > a:nth-child(2)")))
     multi_battle.click()
 
     time.sleep(0.5)
 
-    team_select = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+    team_select = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > select.format-select"))))
     team_select.select_by_value("custom")
 
-    fill_team = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+    fill_team = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.custom-options > select"))))
     fill_team.select_by_value("great")
 
-    opponent_shield = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+    opponent_shield = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(3) > div > div.options > select.shield-select"))))
     opponent_shield.select_by_value(str(OPPO_SHIELD))
 
@@ -58,35 +60,37 @@ def autotest(begin, end):
         try:
             global pokemons
             if not pokemons:
-                choose_pokemon = WebDriverWait(driver, 10).until(
+                choose_pokemon = WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > select")))
                 pokemons = choose_pokemon.text.split('\n')
 
                 print("len of pokemons:", len(pokemons))
 
-            fill_pokemon = WebDriverWait(driver, 10).until(
+            fill_pokemon = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > input")))
             fill_pokemon.clear()
             fill_pokemon.send_keys(pokemons[pokeIndex+1].strip())
 
             if firstTime:
-                pokemon_shield = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+                pokemon_shield = Select(WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
                     (By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > div.options > div.shield-section > select"))))
                 pokemon_shield.select_by_value(str(OUR_SHIELD))
 
-            cp = int(WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > h3 > span.stat"))).text)
+            cp = int(WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > h3 > span.stat"))).text)
 
             if cp < 1400:
                 continue
 
-            battle = WebDriverWait(driver, 10).until(
+            battle = WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".battle-btn")))
             battle.click()
 
-            score = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.battle > div:nth-child(6) > div > div > div > div > div.label.rating.star > span"))).text
-            
+            time.sleep(0.5)
+
+            score = int(WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.battle > div:nth-child(6) > div > div > div > div > div.label.rating.star > span"))).text)
+
             print(f"#{pokeIndex} {pokemons[pokeIndex+1]}: {score}")
 
             with lock:
@@ -94,7 +98,27 @@ def autotest(begin, end):
                     {"name": pokemons[pokeIndex+1].strip(), "score": int(score)})
 
             firstTime = False
-        except:
+        except Exception as e:
+            error_class = e.__class__.__name__  # 取得錯誤類型
+            detail = e.args[0]  # 取得詳細內容
+            cl, exc, tb = sys.exc_info()  # 取得Call Stack
+
+            i = -1
+            while 1:
+                lastCallStack = traceback.extract_tb(tb)[i]  # 取得Call Stack的最後一筆資料
+                fileName = lastCallStack[0]  # 取得發生的檔案名稱
+                lineNum = lastCallStack[1]  # 取得發生的行號
+                funcName = lastCallStack[2]  # 取得發生的函數名稱
+
+                if fileName.find("pkgo_pvpoke_noshield_autotester.py") != -1:
+                    break
+                else:
+                    i -= 1
+
+            errMsg = "File \"{}\", line {}, in {}: [{}] {}".format(
+                fileName, lineNum, funcName, error_class, detail)
+
+            print(f"#{pokeIndex}: {errMsg}")
             continue
 
 
