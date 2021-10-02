@@ -76,7 +76,6 @@ def autotest(begin, end):
 
             cp = int(WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.poke-select-container.multi > div:nth-child(1) > div.poke-stats > h3 > span.stat"))).text)
-            print(f"#{pokeIndex} {pokemons[pokeIndex+1]}: {cp}")
 
             if cp < 1400:
                 continue
@@ -87,6 +86,8 @@ def autotest(begin, end):
 
             score = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "#main > div.section.battle > div:nth-child(6) > div > div > div > div > div.label.rating.star > span"))).text
+            
+            print(f"#{pokeIndex} {pokemons[pokeIndex+1]}: {score}")
 
             with lock:
                 scores.append(
